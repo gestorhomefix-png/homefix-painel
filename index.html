@@ -1003,6 +1003,15 @@ tr.rl:hover td{background:var(--g1);cursor:pointer;}
 <div class="toast" id="toast"></div>
 
 <script>
+// LOGIN TEMPORARIAMENTE DESATIVADO — roda isolado, antes de tudo, blindado contra qualquer
+// erro no restante do código. Garante que a tela de login nunca fique visível por engano.
+try {
+  document.getElementById('login-screen').style.display = 'none';
+  var sbEl = document.querySelector('.sb'); if(sbEl) sbEl.style.visibility = 'visible';
+  var mainEl = document.querySelector('.main'); if(mainEl) mainEl.style.visibility = 'visible';
+} catch(e) { console.error('Erro ao desativar login:', e); }
+</script>
+<script>
 // ── DADOS ──
 const CORES_SWATCH=['#ef4444','#f97316','#f59e0b','#22c55e','#14b8a6','#3b82f6','#8b5cf6','#ec4899','#6b7280','#374151'];
 const URGCOR={urgente:'#ef4444',alta:'#ef4444',media:'#f59e0b',baixa:'#22c55e',normal:'#d1d5db'};
@@ -3068,8 +3077,6 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // Patch all write operations to auto-save
-const _origSalvarOS = salvarOS;
-salvarOS = function() { _origSalvarOS.apply(this, arguments); agendarSalvamento(); };
 const _origSalvarOrc = salvarOrc;
 salvarOrc = function() { _origSalvarOrc.apply(this, arguments); agendarSalvamento(); };
 const _origMoverCard = moverCard;
