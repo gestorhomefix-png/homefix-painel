@@ -3270,7 +3270,7 @@ async function salvarNuvem() {
           if(ind) { ind.textContent = '🔄 Sincronizando...'; ind.style.color = 'rgba(255,255,255,.7)'; }
           mergeComRemoto(remoto);
           // Re-renderiza as telas com o resultado do merge
-          rDash(); rKanban(); rOrcs(); rEquipe(); if(typeof rAgenda==='function') rAgenda();
+          rDash(); rKanban(); rOrcs(); rEquipe(); if(typeof rAgenda==='function') rAgenda(); if(typeof rListaMob==='function') rListaMob();
         }
       } catch(e) {}
     }
@@ -3307,7 +3307,7 @@ async function carregarNuvem() {
       if(d.recCnt) recCnt = d.recCnt;
       ultimoTsConhecido = d._ts || Date.now();
       if(ind) { ind.textContent = '☁️ Sync'; ind.style.color = 'rgba(255,255,255,.4)'; }
-      rDash(); rKanban(); rOrcs(); rEquipe();
+      rDash(); rKanban(); rOrcs(); rEquipe(); if(typeof rListaMob==='function') rListaMob();
       return true;
     } catch(e) { console.error('Erro ao carregar dados:', e); }
   }
@@ -3366,7 +3366,7 @@ async function restaurarVersao(id) {
     if(parsed.agCnt) agCnt = parsed.agCnt;
     if(parsed.recibosAvulsos) recibosAvulsos = parsed.recibosAvulsos;
     if(parsed.recCnt) recCnt = parsed.recCnt;
-    rDash(); rKanban(); rOrcs(); rEquipe();
+    rDash(); rKanban(); rOrcs(); rEquipe(); if(typeof rListaMob==='function') rListaMob();
     await salvarNuvem();
     toast('Versão restaurada e salva!');
     console.log('✅ Versão restaurada com sucesso!');
