@@ -612,6 +612,7 @@ tr.rl:hover td{background:var(--g1);cursor:pointer;}
         <option value="arquivado">Arquivados</option>
       </select>
       <button class="btn bp bsm" onclick="abrirOrc()">+ Novo</button>
+      <button class="btn bg bsm" onclick="abrirRecAvulso()">🧾 Recibo Avulso</button>
     </div>
   </div>
   <div class="tw"><table>
@@ -758,6 +759,7 @@ tr.rl:hover td{background:var(--g1);cursor:pointer;}
         <button class="doc-big" onclick="gerarDoc('orc')">💰<br><span style="font-size:9px">Orçamento</span></button>
         <button class="doc-big" onclick="gerarDoc('lv')">🔍<br><span style="font-size:9px">Laudo de Visita</span></button>
         <button class="doc-big" onclick="gerarDoc('lp')">✅<br><span style="font-size:9px">Laudo Pós-Serviço</span></button>
+        <button class="doc-big" onclick="gerarDoc('rec')">🧾<br><span style="font-size:9px">Recibo</span></button>
       </div>
       <div id="doc-list"></div>
     </div>
@@ -931,6 +933,43 @@ tr.rl:hover td{background:var(--g1);cursor:pointer;}
   <div class="mof"><div id="lp-draft-ind" style="font-size:10px;color:var(--g4);align-self:center"></div><div style="flex:1"></div><button class="btn bg bsm" onclick="closeM('m-lp')">Fechar</button><button class="btn bp bsm" onclick="salvarDoc('lp','Laudo Pós-Serviço')">💾 Salvar</button></div>
 </div></div>
 
+<!-- MODAL RECIBO -->
+<div class="ov" id="m-rec"><div class="mo">
+  <div class="moh"><div class="mot" id="rec-title">Recibo</div><button class="mox" onclick="closeM('m-rec')">✕</button></div>
+  <div class="mob">
+    <div class="lsect" id="rec-info-wrap" style="display:none">
+      <div class="lsect-t">Dados do Imóvel (preenchido automaticamente)</div>
+      <div style="font-size:12px;line-height:1.8" id="rec-info"></div>
+    </div>
+    <div class="fr">
+      <div class="fl" style="margin:0"><label class="lb">Recebi de (nome)</label><input class="fi" id="rec-nome" placeholder="Nome de quem pagou" oninput="salvarRascunhoRec()"/></div>
+      <div class="fl" style="margin:0"><label class="lb">CPF/CNPJ</label><input class="fi" id="rec-cpf" placeholder="000.000.000-00" oninput="salvarRascunhoRec()"/></div>
+    </div>
+    <div class="fl"><label class="lb">Referente a</label><textarea class="ft" id="rec-desc" rows="2" placeholder="Ex: Serviço de manutenção hidráulica - Apto 304" oninput="salvarRascunhoRec()"></textarea></div>
+    <div class="fr">
+      <div class="fl" style="margin:0"><label class="lb">Valor (R$)</label><input class="fi" id="rec-valor" type="text" placeholder="0,00" oninput="formatarValorRec(this)"/></div>
+      <div class="fl" style="margin:0"><label class="lb">Origem</label><div id="rec-valor-origem" style="font-size:11px;color:var(--g4);padding:9px 0;">—</div></div>
+    </div>
+    <div class="fl">
+      <label class="lb">Forma de Pagamento</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="uopt" data-fp="pix" onclick="setRecFP(this)">Pix</button>
+        <button class="uopt" data-fp="dinheiro" onclick="setRecFP(this)">Dinheiro</button>
+        <button class="uopt" data-fp="cartao" onclick="setRecFP(this)">Cartão</button>
+        <button class="uopt" data-fp="transferencia" onclick="setRecFP(this)">Transferência</button>
+        <button class="uopt" data-fp="boleto" onclick="setRecFP(this)">Boleto</button>
+      </div>
+    </div>
+    <div class="fl"><label class="lb">Data</label><input class="fi" id="rec-data" type="date" onchange="salvarRascunhoRec()"/></div>
+  </div>
+  <div class="mof">
+    <div id="rec-draft-ind" style="font-size:10px;color:var(--g4);align-self:center"></div>
+    <div style="flex:1"></div>
+    <button class="btn bg bsm" onclick="closeM('m-rec')">Fechar</button>
+    <button class="btn bp bsm" onclick="salvarRec()">💾 Salvar e Gerar PDF</button>
+  </div>
+</div></div>
+
 <!-- MODAL PRESTADOR -->
 <div class="ov" id="m-tech"><div class="mo">
   <div class="moh"><div class="mot" id="m-tech-title">Adicionar Prestador</div><button class="mox" onclick="closeM('m-tech')">✕</button></div>
@@ -1072,7 +1111,8 @@ cols[8].cards=[{id:'k8',tipo:'MNT',ticket:'MNT TICKET 1893',numimov:'13450/2108'
 cols[10].cards=[{id:'k9',tipo:'MNT',ticket:'MNT ticket 2244',numimov:'13457/2778',predio:'ADIM',end:'Rua K, 88 — BC',nome:'Fernanda Lima',tel:'(47) 91111-2222',imob:'ADIM Imóveis',resp:'Fernanda Lima',oque:'Reparo elétrico',urg:'normal',etqs:['e3'],fotos:[],coments:[],docs:[{tipo:'lp',label:'Laudo Pós-Serviço',dt:'10/06/2025'}]}];
 
 let selEtqs=[],selUrg='alta',osTipo='MNT',orcTipo='MNT',detId=null,oiItems=[],orcEditId=null,kbFilter='all',dashFilter='all',dashImob='',teEditId=null,osDraftId=null;
-let colCnt=12,cardCnt=20,orcCnt=4,etqCnt=9,agCnt=1;
+let colCnt=12,cardCnt=20,orcCnt=4,etqCnt=9,agCnt=1,recCnt=0;
+let recibosAvulsos=[]; // recibos sem OS vinculada — {id, tipo:'rec', label, dt, val, nome, cpf, desc, data, fp}
 let agendamentos=[]; // {id, cardId, tipo:'visita'|'execucao', data:'AAAA-MM-DD', hora:'HH:MM', techId, obs, status:'agendado'|'concluido'|'cancelado'}
 
 // ── UTILS ──
@@ -1389,6 +1429,7 @@ function delCard(cid){
 
 function moverCard(cid,colId){
   const card=getCard(cid);if(!card)return;
+  card._mod=Date.now();
   cols.forEach(c=>{c.cards=c.cards.filter(k=>k.id!==cid);});
   const col=cols.find(c=>c.id===colId);if(col)col.cards.unshift(card);
   toast('Movido para: '+col?.name);closeM('m-det');rDash();rKanban();
@@ -1419,7 +1460,7 @@ function addComent(){
 }
 function rDocs(c){
   const el=gi('doc-list');if(!el)return;
-  el.innerHTML=c.docs.length?c.docs.map((d,i)=>`<div class="doc-item"><div style="flex:1;cursor:pointer" onclick="verDoc('${c.id}',${i})"><div style="font-size:11px;font-weight:700">${{orc:'💰 Orçamento',lv:'🔍 Laudo de Visita',lp:'✅ Laudo Pós-Serviço'}[d.tipo]} ${d.val?'— '+fmtR(d.val):''}</div><div style="font-size:10px;color:var(--g4)">${d.dt}</div></div><div style="display:flex;gap:4px"><button class="btn bg bxs" onclick="verDoc('${c.id}',${i})">📄 Ver</button><button class="btn bg bxs" style="color:var(--red)" onclick="delDoc('${c.id}',${i})" title="Excluir">🗑</button></div></div>`).join(''):'<div style="text-align:center;padding:16px;color:var(--g4);font-size:11px">Nenhum documento gerado.</div>';
+  el.innerHTML=c.docs.length?c.docs.map((d,i)=>`<div class="doc-item"><div style="flex:1;cursor:pointer" onclick="verDoc('${c.id}',${i})"><div style="font-size:11px;font-weight:700">${{orc:'💰 Orçamento',lv:'🔍 Laudo de Visita',lp:'✅ Laudo Pós-Serviço',rec:'🧾 Recibo'}[d.tipo]} ${d.val?'— '+fmtR(d.val):''}</div><div style="font-size:10px;color:var(--g4)">${d.dt}</div></div><div style="display:flex;gap:4px"><button class="btn bg bxs" onclick="verDoc('${c.id}',${i})">📄 Ver</button><button class="btn bg bxs" style="color:var(--red)" onclick="delDoc('${c.id}',${i})" title="Excluir">🗑</button></div></div>`).join(''):'<div style="text-align:center;padding:16px;color:var(--g4);font-size:11px">Nenhum documento gerado.</div>';
 }
 function delDoc(cid,idx){
   const c=getCard(cid);if(!c)return;
@@ -1484,11 +1525,18 @@ function verDoc(cid,idx){
       ${(!isRSC&&d.fotosAntes&&d.fotosAntes.length)?`<div class="lsect"><div class="lsect-t">Fotos — Antes</div>${fotoGrid(d.fotosAntes)}</div>`:''}
       <div class="lsect"><div class="lsect-t">${(!isRSC&&d.fotosAntes&&d.fotosAntes.length)?'Fotos — Depois':'Fotos'}</div>${fotoGrid(d.fotosDepois)}</div>
       <div class="lsect"><div class="lsect-t">Checklist Final</div>${checkHtml}</div>`;
+  } else if(d.tipo==='rec'){
+    const fpLabel={pix:'Pix',dinheiro:'Dinheiro',cartao:'Cartão',transferencia:'Transferência bancária',boleto:'Boleto'}[d.fp]||'Não informado';
+    body=`
+      <div class="lsect" style="background:var(--g);border-radius:9px;padding:14px;display:flex;align-items:center;justify-content:space-between;"><span style="color:#c8d2c0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Valor Recebido</span><span style="color:#fff;font-size:18px;font-weight:800">${fmtR(d.val)}</span></div>
+      <div class="lsect"><div class="lsect-t">Recebi de</div><div style="font-size:12px;line-height:1.8"><b>Nome:</b> ${d.nome||'—'} &nbsp;·&nbsp; <b>CPF/CNPJ:</b> ${d.cpf||'—'}<br><b>Data:</b> ${d.data?fmtDataBR(d.data):d.dt} &nbsp;·&nbsp; <b>Forma de pagamento:</b> ${fpLabel}</div></div>
+      <div class="lsect"><div class="lsect-t">Referente a</div><div style="font-size:12px;line-height:1.6">${d.desc||'—'}</div></div>
+      ${d.snapshot?`<div class="lsect"><div class="lsect-t">OS Vinculada</div><div style="font-size:12px;line-height:1.8"><b>Ticket:</b> ${d.snapshot.ticket||'—'} &nbsp;·&nbsp; <b>Imóvel:</b> ${d.snapshot.predio||d.snapshot.end||'—'}</div></div>`:''}`;
   }
   const downloadBtn=`<button class="btn bp bsm" onclick="gerarPDF('${cid}',${idx})">⬇️ Gerar PDF</button>`;
   const editBtn=d.tipo==='orc'?`<button class="btn bgr bsm" onclick="editarOrc('${cid}',${idx})">✏️ Editar</button>`:'';
   tmp.innerHTML=`<div class="mo mo-lg">
-    <div class="moh"><div class="mot">${{orc:'💰 Orçamento',lv:'🔍 Laudo de Visita',lp:'✅ Laudo Pós-Serviço'}[d.tipo]} — ${d.dt}</div><button class="mox" onclick="document.getElementById('m-doc-view').remove()">✕</button></div>
+    <div class="moh"><div class="mot">${{orc:'💰 Orçamento',lv:'🔍 Laudo de Visita',lp:'✅ Laudo Pós-Serviço',rec:'🧾 Recibo'}[d.tipo]} — ${d.dt}</div><button class="mox" onclick="document.getElementById('m-doc-view').remove()">✕</button></div>
     <div class="mob" style="padding-bottom:16px">${body}</div>
     <div class="mof"><button class="btn bg bsm" onclick="document.getElementById('m-doc-view').remove()">Fechar</button><div style="flex:1"></div>${editBtn}${downloadBtn}</div>
   </div>`;
@@ -1571,6 +1619,33 @@ function gerarDoc(tipo){
     }
     closeM('m-det');openM('m-lp');
   }
+  else if(tipo==='rec'){
+    recDraftIdx=null;
+    const c=getCard(detId);
+    gi('rec-info-wrap').style.display=c?'block':'none';
+    gi('rec-info').innerHTML=c?`
+      <b>Nº Imóvel/Contrato:</b> ${c.numimov||'—'} &nbsp;·&nbsp; <b>Prédio:</b> ${c.predio||'—'}<br>
+      <b>Locatário:</b> ${c.nome||'—'} &nbsp;·&nbsp; <b>Ticket:</b> ${c.ticket||'—'}`:'';
+    sv('rec-nome',c?.nome||'');
+    sv('rec-cpf','');
+    sv('rec-desc',c?('Serviço de '+(c.oque||c.tipo||'manutenção')+' — '+(c.predio||c.end||'')):'');
+    sv('rec-data',new Date().toISOString().split('T')[0]);
+    setRecFP(null);
+    // Busca valor do laudo pós-serviço (prioridade) ou orçamento mais recente daquele card
+    const docsDoCard=c?.docs||[];
+    const ultimoLp=docsDoCard.filter(d=>d.tipo==='lp').pop();
+    const ultimoOrc=docsDoCard.filter(d=>d.tipo==='orc').pop();
+    const origem=ultimoLp&&ultimoLp.valorFinal?{val:ultimoLp.valorFinal,txt:'✅ Puxado do Laudo Pós-Serviço'}:(ultimoOrc&&ultimoOrc.val?{val:ultimoOrc.val,txt:'💰 Puxado do orçamento '+(ultimoOrc.num||'')}:null);
+    if(origem){
+      sv('rec-valor',Number(origem.val).toFixed(2).replace('.',','));
+      gi('rec-valor-origem').innerHTML=origem.txt+' — pode editar';
+    } else {
+      sv('rec-valor','');
+      gi('rec-valor-origem').innerHTML='Preencha manualmente';
+    }
+    gi('rec-title').textContent=c?'Recibo — '+(c.ticket||c.numimov||''):'Novo Recibo';
+    closeM('m-det');openM('m-rec');
+  }
 }
 // Índices de rascunho para Laudo de Visita e Laudo Pós-Serviço (por card, durante a sessão aberta).
 // Evita duplicar documentos quando o autosave roda várias vezes seguidas.
@@ -1622,6 +1697,74 @@ function salvarDoc(tipo,label,silencioso){
   verDoc(c.id,idxFinal!=null?idxFinal:c.docs.length-1);
 }
 
+// ── RECIBO ──
+// Suporta dois fluxos: vinculado a uma OS (detId definido, puxa dados automaticamente)
+// e avulso (sem OS, preenchido 100% manual via abrirRecAvulso()).
+let recDraftIdx=null,recGlobalId=null,_recFP='';
+function setRecFP(el){
+  document.querySelectorAll('#m-rec [data-fp]').forEach(b=>{b.classList.remove('on');b.style.cssText='';});
+  if(el){el.classList.add('on');el.style.cssText='background:var(--cr);border-color:var(--t);color:var(--t)';_recFP=el.dataset.fp;}
+  else{_recFP='';}
+  salvarRascunhoRec();
+}
+function formatarValorRec(el){
+  let v=el.value.replace(/\D/g,'');
+  if(!v){el.value='';return;}
+  v=(parseInt(v,10)/100).toFixed(2);
+  el.value=v.replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  gi('rec-valor-origem').innerHTML='✏️ Valor editado manualmente';
+  salvarRascunhoRec();
+}
+function abrirRecAvulso(){
+  detId=null;recDraftIdx=null;recGlobalId=null;
+  gi('rec-info-wrap').style.display='none';
+  gi('rec-title').textContent='Novo Recibo';
+  ['rec-nome','rec-cpf','rec-desc','rec-valor'].forEach(i=>sv(i,''));
+  gi('rec-valor-origem').innerHTML='—';
+  sv('rec-data',new Date().toISOString().split('T')[0]);
+  setRecFP(null);
+  openM('m-rec');
+}
+let _recRascunhoTimer=null;
+function salvarRascunhoRec(){
+  clearTimeout(_recRascunhoTimer);
+  _recRascunhoTimer=setTimeout(()=>salvarRec(true),500);
+}
+function salvarRec(silencioso){
+  const temAlgo=gv('rec-nome')||gv('rec-desc')||gv('rec-valor');
+  if(!temAlgo&&silencioso)return;
+  if(!silencioso&&!gv('rec-nome')){toast('Informe quem pagou.');return;}
+  const valorNum=parseFloat((gv('rec-valor')||'0').replace(/\./g,'').replace(',','.'))||0;
+  const c=detId?getCard(detId):null;
+  const dt=new Date().toLocaleDateString('pt-BR');
+  const recData={tipo:'rec',label:'Recibo',dt,val:valorNum,nome:gv('rec-nome'),cpf:gv('rec-cpf'),desc:gv('rec-desc'),data:gv('rec-data'),fp:_recFP,snapshot:c?{numimov:c.numimov,predio:c.predio,end:c.end,ticket:c.ticket,imob:c.imob}:null};
+
+  if(c){
+    if(recDraftIdx!=null&&c.docs[recDraftIdx]){c.docs[recDraftIdx]=recData;}
+    else{c.docs.push(recData);recDraftIdx=c.docs.length-1;}
+    rDocs(c);
+  } else {
+    // Recibo avulso: guarda numa lista própria, sem vínculo a OS
+    if(recGlobalId){
+      const rg=recibosAvulsos.find(r=>r.id===recGlobalId);
+      if(rg)Object.assign(rg,recData);
+    } else {
+      const id='REC'+(++recCnt);
+      recibosAvulsos.unshift({id,...recData});
+      recGlobalId=id;
+    }
+  }
+  rDash();
+  if(typeof agendarSalvamento==='function')agendarSalvamento();
+  if(silencioso){
+    const ind=gi('rec-draft-ind');if(ind)ind.textContent='☁️ Salvo automaticamente';
+    return;
+  }
+  toast('Recibo salvo!');
+  if(c){gerarPDFRecibo(recData,c);}
+  else{gerarPDFRecibo(recData,null);}
+}
+
 // ── GERAR PDF LAUDO PÓS-SERVIÇO (RPS) ──
 // ── DISPATCHER PDF ──
 function gerarPDF(cid,idx){
@@ -1630,6 +1773,7 @@ function gerarPDF(cid,idx){
   if(d.tipo==='lp')gerarPDFLaudoPos(d);
   else if(d.tipo==='orc')gerarPDFOrcamento(d,c);
   else if(d.tipo==='lv')gerarPDFLaudoVisita(d,c);
+  else if(d.tipo==='rec')gerarPDFRecibo(d,c);
 }
 
 // ── PDF ORÇAMENTO ──
@@ -1773,6 +1917,108 @@ function gerarPDFOrcamento(d,c){
 }
 
 // ── PDF LAUDO DE VISITA ──
+// ── NÚMERO POR EXTENSO (para o recibo) ──
+function valorPorExtenso(valor){
+  const UNI=['','um','dois','três','quatro','cinco','seis','sete','oito','nove'];
+  const DEZ=['dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove'];
+  const DEZ10=['','','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa'];
+  const CEM=['','cento','duzentos','trezentos','quatrocentos','quinhentos','seiscentos','setecentos','oitocentos','novecentos'];
+  function extGrupo(n){
+    if(n===0)return '';
+    if(n===100)return 'cem';
+    let s='';
+    const c=Math.floor(n/100),d=Math.floor((n%100)/10),u=n%10;
+    if(c)s+=CEM[c];
+    const resto=n%100;
+    if(resto>0){
+      if(s)s+=' e ';
+      if(resto<10)s+=UNI[resto];
+      else if(resto<20)s+=DEZ[resto-10];
+      else{s+=DEZ10[d];if(u)s+=' e '+UNI[u];}
+    }
+    return s;
+  }
+  function extMilhar(n){
+    if(n===0)return 'zero';
+    const milhar=Math.floor(n/1000),resto=n%1000;
+    let s='';
+    if(milhar===1)s='mil';
+    else if(milhar>1)s=extGrupo(milhar)+' mil';
+    if(resto>0){if(s)s+=' e ';s+=extGrupo(resto);}
+    return s;
+  }
+  const inteiro=Math.floor(valor),centavos=Math.round((valor-inteiro)*100);
+  let texto=extMilhar(inteiro)+(inteiro===1?' real':' reais');
+  if(centavos>0)texto+=' e '+extGrupo(centavos)+(centavos===1?' centavo':' centavos');
+  return texto.charAt(0).toUpperCase()+texto.slice(1);
+}
+
+// ── PDF RECIBO ──
+function gerarPDFRecibo(d,c){
+  const jsPDFlib=(window.jspdf||{}).jsPDF;
+  if(!jsPDFlib){toast('Carregando biblioteca de PDF, tente novamente em 2s...');return;}
+  const doc=new jsPDFlib({unit:'mm',format:'a4'});
+  const PW=210,ML=14,CW=182;
+  const VERDE=[55,61,49],TERRA=[146,67,16],CINZA=[107,104,96],CINZAFUNDO=[246,244,240],BRANCO=[255,255,255];
+  let y=0;
+
+  doc.setFillColor(...VERDE);doc.rect(0,0,PW,30,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(20);
+  doc.text('Homefix',ML,13);
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(200,210,195);
+  doc.text('SERVIÇOS E MANUTENÇÃO',ML,18.5);
+  doc.setTextColor(150,165,140);
+  doc.text('CNPJ 57.017.878/0001-57  |  (47) 99222-6125  |  www.homefix.com',ML,24);
+  doc.setFillColor(...TERRA);doc.rect(PW-62,5,48,20,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');
+  doc.setFontSize(11);doc.text('RECIBO',PW-38,14,{align:'center'});
+  doc.setFontSize(7);doc.text(d.data?fmtDataBR(d.data):d.dt,PW-38,20,{align:'center'});
+
+  y=42;
+  const fpLabel={pix:'Pix',dinheiro:'Dinheiro',cartao:'Cartão',transferencia:'Transferência bancária',boleto:'Boleto'}[d.fp]||'Não informado';
+  const valorTxt='R$ '+Number(d.val||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const extenso=valorPorExtenso(Number(d.val||0));
+
+  // Caixa de valor em destaque
+  doc.setFillColor(...CINZAFUNDO);doc.roundedRect(ML,y,CW,24,2,2,'F');
+  doc.setTextColor(...CINZA);doc.setFont('helvetica','bold');doc.setFontSize(8);
+  doc.text('VALOR RECEBIDO',ML+6,y+8);
+  doc.setTextColor(...VERDE);doc.setFont('helvetica','bold');doc.setFontSize(20);
+  doc.text(valorTxt,ML+6,y+18);
+  doc.setTextColor(...CINZA);doc.setFont('helvetica','normal');doc.setFontSize(7);
+  doc.text('Forma de pagamento: '+fpLabel,PW-ML-6,y+18,{align:'right'});
+  y+=32;
+
+  // Texto formal do recibo
+  doc.setTextColor(40,40,40);doc.setFont('helvetica','normal');doc.setFontSize(10);
+  const linha1='Recebi de '+(d.nome||'—')+(d.cpf?' (CPF/CNPJ: '+d.cpf+')':'')+', a importância de';
+  const linha2=valorTxt+' ('+extenso+'),';
+  const linha3='referente a: '+(d.desc||'—')+'.';
+  doc.text(doc.splitTextToSize(linha1,CW),ML,y);y+=10;
+  doc.setFont('helvetica','bold');
+  doc.text(doc.splitTextToSize(linha2,CW),ML,y);y+=10;
+  doc.setFont('helvetica','normal');
+  doc.text(doc.splitTextToSize(linha3,CW),ML,y);y+=14;
+
+  if(c){
+    doc.setFillColor(...CINZAFUNDO);doc.rect(ML,y,CW,18,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...CINZA);
+    doc.text('IMÓVEL / OS VINCULADA',ML+4,y+6);
+    doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(60,60,60);
+    doc.text((c.ticket||c.numimov||'—')+'  ·  '+(c.predio||c.end||'—'),ML+4,y+13);
+    y+=24;
+  }
+
+  y+=16;
+  doc.setDrawColor(...CINZA);doc.setLineWidth(.2);
+  doc.line(ML+30,y,ML+CW-30,y);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...CINZA);
+  doc.text('Assinatura — Homefix Serviços e Manutenção',PW/2,y+5,{align:'center'});
+
+  const nomeArq='Recibo_'+(c?(c.ticket||c.numimov||'OS'):(d.nome||'avulso')).replace(/[^\w]/g,'_')+'_'+(d.data||d.dt).replace(/\//g,'-')+'.pdf';
+  doc.save(nomeArq);
+}
+
 function gerarPDFLaudoVisita(d,c){
   const jsPDFlib=(window.jspdf||{}).jsPDF;
   if(!jsPDFlib){toast('Carregando biblioteca de PDF, tente novamente em 2s...');return;}
@@ -2188,7 +2434,7 @@ function salvarRascunhoOS(){
       const hoje=new Date().toLocaleDateString('pt-BR');
       const agora=new Date();
       const criadoEm=agora.toLocaleDateString('pt-BR')+' '+agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-      col.cards.unshift({id,...dados,fotos:[],fotosAntes:[],fotosDepois:[],coments:[],docs:[],anexos:[],data:hoje,criadoEm});
+      col.cards.unshift({id,...dados,fotos:[],fotosAntes:[],fotosDepois:[],coments:[],docs:[],anexos:[],data:hoje,criadoEm,_mod:Date.now()});
       osDraftId=id;
       gi('m-os-title').textContent='Nova OS (salva automaticamente)';
       rDash();rKanban();
@@ -2934,8 +3180,75 @@ async function supaSet(chave, valor) {
 
 function agendarSalvamento() {
   mudancaPendente = true;
+  // Marca o card atualmente em edição com timestamp de modificação, para o merge
+  // multiusuário saber qual versão é a mais recente em caso de conflito.
+  try { if(detId){ const _c=getCard(detId); if(_c) _c._mod = Date.now(); } } catch(e){}
   clearTimeout(syncTimer);
   syncTimer = setTimeout(salvarNuvem, 1500);
+}
+
+// ── MERGE MULTIUSUÁRIO ──
+// Junta os dados locais com os da nuvem por ID, para que o trabalho de um usuário
+// nunca apague o do outro. Quando o mesmo item existe nos dois lados, vence a versão
+// modificada mais recentemente (_mod). Itens que só existem de um lado são preservados.
+function mergeListaPorId(local, remoto, idKey){
+  idKey = idKey || 'id';
+  const mapa = {};
+  // Primeiro a remota (base), depois sobrescreve com a local quando for mais nova
+  (remoto||[]).forEach(item => { if(item && item[idKey]!=null) mapa[item[idKey]] = item; });
+  (local||[]).forEach(item => {
+    if(!item || item[idKey]==null) return;
+    const existente = mapa[item[idKey]];
+    if(!existente){ mapa[item[idKey]] = item; }
+    else {
+      // Conflito: mesmo id nos dois lados — mantém o modificado mais recentemente
+      const tL = item._mod || 0, tR = existente._mod || 0;
+      mapa[item[idKey]] = (tL >= tR) ? item : existente;
+    }
+  });
+  return Object.values(mapa);
+}
+
+// Junta o estado local com o remoto e aplica o resultado nas variáveis globais.
+function mergeComRemoto(remoto){
+  if(!remoto) return;
+  // Cards: junta por id dentro de cada coluna, preservando a estrutura de colunas
+  if(remoto.cols){
+    // Mapa id->{card, colId} de ambos os lados
+    const todosLocais = {}, todosRemotos = {};
+    cols.forEach(col => col.cards.forEach(c => todosLocais[c.id] = {card:c, colId:col.id}));
+    remoto.cols.forEach(col => col.cards.forEach(c => todosRemotos[c.id] = {card:c, colId:col.id}));
+    // União de todos os ids
+    const todosIds = new Set([...Object.keys(todosLocais), ...Object.keys(todosRemotos)]);
+    // Decide a versão vencedora e a coluna de cada card
+    const vencedores = {}; // colId -> [cards]
+    cols.forEach(col => vencedores[col.id] = []);
+    remoto.cols.forEach(col => { if(!vencedores[col.id]) vencedores[col.id] = []; });
+    todosIds.forEach(id => {
+      const L = todosLocais[id], R = todosRemotos[id];
+      let escolhido, colId;
+      if(L && R){
+        const tL = L.card._mod||0, tR = R.card._mod||0;
+        if(tL >= tR){ escolhido = L.card; colId = L.colId; } else { escolhido = R.card; colId = R.colId; }
+      } else if(L){ escolhido = L.card; colId = L.colId; }
+      else { escolhido = R.card; colId = R.colId; }
+      if(!vencedores[colId]) vencedores[colId] = [];
+      vencedores[colId].push(escolhido);
+    });
+    // Aplica de volta nas colunas existentes
+    cols.forEach(col => { col.cards = vencedores[col.id] || []; });
+  }
+  if(remoto.orcs) orcs = mergeListaPorId(orcs, remoto.orcs);
+  if(remoto.techs) techs = mergeListaPorId(techs, remoto.techs);
+  if(remoto.agendamentos) agendamentos = mergeListaPorId(agendamentos, remoto.agendamentos);
+  if(remoto.recibosAvulsos) recibosAvulsos = mergeListaPorId(recibosAvulsos, remoto.recibosAvulsos);
+  if(remoto.etqGlobal && (!etqGlobal || !etqGlobal.length)) etqGlobal = remoto.etqGlobal;
+  // Contadores: mantém sempre o maior, pra nunca reusar id
+  if(remoto.cardCnt) cardCnt = Math.max(cardCnt, remoto.cardCnt);
+  if(remoto.orcCnt) orcCnt = Math.max(orcCnt, remoto.orcCnt);
+  if(remoto.etqCnt) etqCnt = Math.max(etqCnt, remoto.etqCnt);
+  if(remoto.agCnt) agCnt = Math.max(agCnt, remoto.agCnt);
+  if(remoto.recCnt) recCnt = Math.max(recCnt, remoto.recCnt);
 }
 
 // Salva, mas SEMPRE confere a versão mais recente do servidor primeiro.
@@ -2946,27 +3259,24 @@ async function salvarNuvem() {
   salvando = true;
   const ind = gi('sync-ind');
   try {
-    // 1. Busca a versão mais recente do servidor para comparar
+    // 1. Busca a versão mais recente do servidor
     const raw = await supaGet('homefix_dados');
     if(raw) {
       try {
         const remoto = JSON.parse(raw);
-        // Só recarrega por cima das mudanças locais se NÃO houver uma ação do usuário
-        // ainda pendente de salvar. Se o usuário acabou de aprovar/editar algo agora,
-        // essa mudança local sempre tem prioridade — nunca descartamos a ação do usuário.
-        if(remoto._ts && remoto._ts > ultimoTsConhecido && !mudancaPendente) {
-          if(ind) { ind.textContent = '🔄 Atualizando...'; ind.style.color = 'rgba(255,255,255,.7)'; }
-          await carregarNuvem();
-          toast('Dados atualizados por outro dispositivo — tela recarregada.');
-          salvando = false;
-          if(pendenteResalvar) { pendenteResalvar = false; agendarSalvamento(); }
-          return;
+        // Se a nuvem tem algo mais novo do que vimos por último, FAZ MERGE em vez de
+        // sobrescrever — junta o trabalho dos dois usuários por id. Assim nada se perde.
+        if(remoto._ts && remoto._ts > ultimoTsConhecido) {
+          if(ind) { ind.textContent = '🔄 Sincronizando...'; ind.style.color = 'rgba(255,255,255,.7)'; }
+          mergeComRemoto(remoto);
+          // Re-renderiza as telas com o resultado do merge
+          rDash(); rKanban(); rOrcs(); rEquipe(); if(typeof rAgenda==='function') rAgenda();
         }
       } catch(e) {}
     }
-    // 2. Salva a versão local (que inclui a ação mais recente do usuário, se houver)
+    // 2. Grava o resultado do merge (local + remoto juntos)
     const novoTs = Date.now();
-    const dados = JSON.stringify({ cols, orcs, techs, etqGlobal, orcCnt, cardCnt, etqCnt, agendamentos, agCnt, _ts: novoTs });
+    const dados = JSON.stringify({ cols, orcs, techs, etqGlobal, orcCnt, cardCnt, etqCnt, agendamentos, agCnt, recibosAvulsos, recCnt, _ts: novoTs });
     await supaSet('homefix_dados', dados);
     ultimoTsConhecido = novoTs;
     mudancaPendente = false;
@@ -2993,6 +3303,8 @@ async function carregarNuvem() {
       if(d.etqCnt) etqCnt = d.etqCnt;
       if(d.agendamentos) agendamentos = d.agendamentos;
       if(d.agCnt) agCnt = d.agCnt;
+      if(d.recibosAvulsos) recibosAvulsos = d.recibosAvulsos;
+      if(d.recCnt) recCnt = d.recCnt;
       ultimoTsConhecido = d._ts || Date.now();
       if(ind) { ind.textContent = '☁️ Sync'; ind.style.color = 'rgba(255,255,255,.4)'; }
       rDash(); rKanban(); rOrcs(); rEquipe();
@@ -3052,6 +3364,8 @@ async function restaurarVersao(id) {
     if(parsed.etqCnt) etqCnt = parsed.etqCnt;
     if(parsed.agendamentos) agendamentos = parsed.agendamentos;
     if(parsed.agCnt) agCnt = parsed.agCnt;
+    if(parsed.recibosAvulsos) recibosAvulsos = parsed.recibosAvulsos;
+    if(parsed.recCnt) recCnt = parsed.recCnt;
     rDash(); rKanban(); rOrcs(); rEquipe();
     await salvarNuvem();
     toast('Versão restaurada e salva!');
