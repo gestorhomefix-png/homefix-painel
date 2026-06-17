@@ -281,7 +281,6 @@ tr.rl:hover td{background:var(--g1);cursor:pointer;}
   .kb-page { display: none !important; }
 
   /* LISTA MOBILE de OS */
-  #p-lista-mob { display: block; }
   .os-list-item { background: #fff; border-radius: 10px; border: 1.5px solid var(--g2); padding: 12px; margin-bottom: 8px; cursor: pointer; }
   .os-list-item:active { background: var(--g1); }
   .os-list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
@@ -561,7 +560,8 @@ tr.rl:hover td{background:var(--g1);cursor:pointer;}
 </div>
 
 <!-- LISTA MOBILE OS -->
-<div class="content page" id="p-lista-mob" style="display:none">
+<div class="content page" id="p-lista-mob">
+  <button class="btn bp bsm" style="width:100%;margin-bottom:10px" onclick="openNewCard(null)">+ Nova OS</button>
   <div class="os-filtro-bar">
     <input id="mob-os-q" placeholder="🔍 Buscar OS..." oninput="rListaMob()"/>
     <select id="mob-os-tipo" onchange="rListaMob()"><option value="">Todos</option><option value="MNT">MNT</option><option value="RSC">RSC</option></select>
